@@ -5,7 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VaultNote - Personal Hub</title>
+
+    <meta name="theme-color" content="#8a1fef">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/icons/logo.png') }}">
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
+
+    <meta name="theme-color" content="#8a1fef">
+    <meta name="msapplication-navbutton-color" content="#8a1fef">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
@@ -489,6 +497,13 @@
                                         </p>
                                     </div>
                                 </div>
+                                <form action="{{ route('jadwal.destroy', $item->id) }}" method="POST"
+                                    onsubmit="return confirm('Hapus akun ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                        class="text-xs text-slate-400 hover:text-rose-500 transition">Hapus</button>
+                                </form>
                             </div>
                         @empty
                             <div class="col-span-full glass-card rounded-2xl p-6 text-center text-sm text-slate-500">
@@ -709,6 +724,131 @@
             </form>
         </div>
     </div>
+
+    <!-- Script untuk PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('Service Worker terdaftar:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.error('Gagal mendaftarkan Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+
+    <!-- PWA INSTALL POPUP -->
+    <div x-data="pwaInstallPopup()" x-init="init()" x-show="showPopup" x-cloak
+        x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4"
+        x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
+        class="fixed bottom-24 md:bottom-6 right-4 left-4 sm:left-auto sm:w-96 z-50">
+        <div class="glass-card rounded-3xl p-4 shadow-2xl border border-[#8a1fef]/20">
+            <div class="flex items-start gap-3.5">
+                <img src="{{ asset('logo.png') }}" alt="VaultNote Logo"
+                    class="w-12 h-12 rounded-2xl object-cover shrink-0 shadow-sm">
+
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <h4 class="text-sm font-extrabold text-slate-900 truncate">Install VaultNote</h4>
+                        <button type="button" @click="dismiss()"
+                            class="text-slate-400 hover:text-slate-600 text-base leading-none">&times;</button>
+                    </div>
+
+                    <!-- Tampilan untuk Android / Desktop Chrome / Edge -->
+                    <template x-if="!isIos">
+                        <div>
+                            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                                Akses lebih cepat langsung dari layar utama dengan tampilan aplikasi penuh.
+                            </p>
+                            <div class="mt-3 flex items-center gap-2">
+                                <button type="button" @click="installApp()"
+                                    class="px-4 py-2 rounded-xl bg-[#8a1fef] hover:bg-[#7614d4] text-white text-xs font-bold transition shadow-sm">
+                                    Install Aplikasi
+                                </button>
+                                <button type="button" @click="dismiss()"
+                                    class="px-3 py-2 rounded-xl text-slate-500 hover:bg-slate-100 text-xs font-semibold transition">
+                                    Nanti Saja
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Panduan singkat untuk iPhone / iPad (Safari) -->
+                    <template x-if="isIos">
+                        <div>
+                            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                                Tap tombol <span class="font-bold text-slate-700">Share</span> lalu pilih
+                                <span class="font-bold text-slate-700">Add to Home Screen</span> untuk menginstall.
+                            </p>
+                            <button type="button" @click="dismiss()"
+                                class="mt-2.5 text-xs font-bold text-[#8a1fef] hover:underline">
+                                Mengerti
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function pwaInstallPopup() {
+            return {
+                deferredPrompt: null,
+                showPopup: false,
+                isIos: false,
+
+                init() {
+                    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                        window.navigator.standalone === true;
+
+                    if (isStandalone || localStorage.getItem('pwa_install_dismissed') === '1') {
+                        return;
+                    }
+
+                    const ua = window.navigator.userAgent.toLowerCase();
+                    this.isIos = /iphone|ipad|ipod/.test(ua) && !window.MSStream;
+
+                    if (this.isIos) {
+                        setTimeout(() => {
+                            this.showPopup = true;
+                        }, 1200);
+                        return;
+                    }
+
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        e.preventDefault();
+                        this.deferredPrompt = e;
+                        this.showPopup = true;
+                    });
+
+                    window.addEventListener('appinstalled', () => {
+                        this.showPopup = false;
+                        this.deferredPrompt = null;
+                    });
+                },
+
+                async installApp() {
+                    if (!this.deferredPrompt) return;
+                    this.deferredPrompt.prompt();
+                    const { outcome } = await this.deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        this.showPopup = false;
+                    }
+                    this.deferredPrompt = null;
+                },
+
+                dismiss() {
+                    this.showPopup = false;
+                    localStorage.setItem('pwa_install_dismissed', '1');
+                }
+            }
+        }
+    </script>
 
 </body>
 

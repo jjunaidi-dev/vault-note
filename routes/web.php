@@ -26,6 +26,9 @@ Route::middleware('guest:admin')->group(function () {
 
 });
 
+//Route ketika ofline
+Route::view('/offline', 'offline')->name('offline');
+
 //Route Terproteksi atau wajib login
 Route::middleware('auth:admin')->group(function(){
    // Menampilkan halaman daftar akun pribadi
@@ -47,5 +50,5 @@ Route::middleware('auth:admin')->group(function(){
     Route::post('/jadwal', [JadwalController::class, 'store'])->name('jadwal.store');
 
     // Menghapus Jadwal
-    Route::delete('/jadwal{id}', [JadwalController::class, 'destroy'])->name('jadwal.destroy');
+    Route::delete('/jadwal/{id}', [JadwalController::class, 'destroy'])->name('jadwal.destroy');
 });
